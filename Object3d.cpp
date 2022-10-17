@@ -33,13 +33,13 @@ D3D12_INDEX_BUFFER_VIEW Object3d::ibView{};
 Object3d::VertexPosNormalUv Object3d::vertices[vertexCount];
 unsigned short Object3d::indices[indexCount];
 
-void Object3d::StaticInitialize(ID3D12Device * device, int window_width, int window_height)
+void Object3d::StaticInitialize(ID3D12Device* device, int window_width, int window_height)
 {
 	// nullptrチェック
 	assert(device);
 
 	Object3d::device = device;
-		
+
 	// デスクリプタヒープの初期化
 	InitializeDescriptorHeap();
 
@@ -57,7 +57,7 @@ void Object3d::StaticInitialize(ID3D12Device * device, int window_width, int win
 
 }
 
-void Object3d::PreDraw(ID3D12GraphicsCommandList * cmdList)
+void Object3d::PreDraw(ID3D12GraphicsCommandList* cmdList)
 {
 	// PreDrawとPostDrawがペアで呼ばれていなければエラー
 	assert(Object3d::cmdList == nullptr);
@@ -79,7 +79,7 @@ void Object3d::PostDraw()
 	Object3d::cmdList = nullptr;
 }
 
-Object3d * Object3d::Create()
+Object3d* Object3d::Create()
 {
 	// 3Dオブジェクトのインスタンスを生成
 	Object3d* object3d = new Object3d();
@@ -142,7 +142,7 @@ void Object3d::CameraMoveEyeVector(XMFLOAT3 move)
 void Object3d::InitializeDescriptorHeap()
 {
 	HRESULT result = S_FALSE;
-	
+
 	// デスクリプタヒープを生成	
 	D3D12_DESCRIPTOR_HEAP_DESC descHeapDesc = {};
 	descHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
@@ -160,11 +160,8 @@ void Object3d::InitializeDescriptorHeap()
 
 void Object3d::InitializeCamera(int window_width, int window_height)
 {
-	// ビュー行列の生成
-	matView = XMMatrixLookAtLH(
-		XMLoadFloat3(&eye),
-		XMLoadFloat3(&target),
-		XMLoadFloat3(&up));
+	//ビュー行列の計算
+	UpdateViewMatrix();
 
 	// 平行投影による射影行列の生成
 	//constMap->mat = XMMatrixOrthographicOffCenterLH(
@@ -333,7 +330,7 @@ void Object3d::LoadTexture()
 	ScratchImage scratchImg{};
 
 	// WICテクスチャのロード
-	result = LoadFromWICFile( L"Resources/tex1.png", WIC_FLAGS_NONE, &metadata, scratchImg);
+	result = LoadFromWICFile(L"Resources/tex1.png", WIC_FLAGS_NONE, &metadata, scratchImg);
 	assert(SUCCEEDED(result));
 
 	ScratchImage mipChain{};
@@ -402,7 +399,7 @@ void Object3d::CreateModel()
 	HRESULT result = S_FALSE;
 
 	std::vector<VertexPosNormalUv> realVertices;
-	
+
 	//四角形の頂点データ
 	VertexPosNormalUv verticesSquare[] = {
 		{{-5.0f,-5.0f,0.0f},{0,0,1},{0,1}},	//左下
@@ -422,7 +419,7 @@ void Object3d::CreateModel()
 
 	//メンバ変数にコピー
 	std::copy(std::begin(indicesSquare), std::end(indicesSquare), indices);
-	
+
 	UINT sizeVB = static_cast<UINT>(sizeof(vertices));
 
 	// ヒーププロパティ
@@ -480,8 +477,61 @@ void Object3d::CreateModel()
 
 void Object3d::UpdateViewMatrix()
 {
-	// ビュー行列の更新
-	matView = XMMatrixLookAtLH(XMLoadFloat3(&eye), XMLoadFloat3(&target), XMLoadFloat3(&up));
+	//視点座標
+	XMVECTOR eyePosition = XMLoadFloat3(&eye);
+	//注視点座標
+	XMVECTOR targetPosition = XMLoadFloat3(&target);
+	//（仮の）上方向
+	XMVECTOR upVector = XMLoadFloat3(&up);
+
+	//カメラZ軸（視線方向）
+	XMVECTOR cameraAxisZ = XMVectorSubtract(targetPosition, eyePosition);
+
+	//0ベクトルだと向きが定まらないので除外
+	assert(!XMVector3Equal(cameraAxisZ, XMVectorZero()));
+	assert(!XMVector3IsInfinite(cameraAxisZ));
+	assert(!XMVector3Equal(upVector, XMVectorZero()));
+	assert(!XMVector3IsInfinite(upVector));
+
+	//ベクトル正規化
+	cameraAxisZ = XMVector3Normalize(cameraAxisZ);
+
+	//カメラのX軸（右方向）
+	XMVECTOR cameraAxisX;
+	//X軸は上方向→Z軸の外積で求まる
+	cameraAxisX = XMVector3Cross(upVector, cameraAxisZ);
+	//ベクトルを正規化
+	cameraAxisX = XMVector3Normalize(cameraAxisX);
+
+	//カメラのY軸（上方向）
+	XMVECTOR cameraAxisY;
+	//Y軸はZ軸→X軸の外積で求まる
+	cameraAxisY = XMVector3Cross(cameraAxisZ, cameraAxisX);
+	//ベクトルを正規化
+	cameraAxisY = XMVector3Normalize(cameraAxisY);
+
+	//カメラ回転行列
+	XMMATRIX matCameraRot;
+	//カメラ座標系→ワールド座標系の変換行列
+	matCameraRot.r[0] = cameraAxisX;
+	matCameraRot.r[1] = cameraAxisY;
+	matCameraRot.r[2] = cameraAxisZ;
+	matCameraRot.r[3] = XMVectorSet(0, 0, 0, 1);
+
+	//転置により逆行列（逆回転）を計算
+	matView = XMMatrixTranspose(matCameraRot);
+
+	//視点座標に-1を掛けた座標
+	XMVECTOR reverseEyePosition = XMVectorNegate(eyePosition);
+	//カメラの位置からワールド原点へのベクトル（カメラ座標系）
+	XMVECTOR tx = XMVector3Dot(cameraAxisX, reverseEyePosition);	//X成分
+	XMVECTOR ty = XMVector3Dot(cameraAxisY, reverseEyePosition);	//Y成分
+	XMVECTOR tz = XMVector3Dot(cameraAxisZ, reverseEyePosition);	//Z成分
+	//人るのベクトルにまとめる
+	XMVECTOR translation = XMVectorSet(tx.m128_f32[0], ty.m128_f32[1], tz.m128_f32[2], 1.0f);
+
+	//ビュー行列に平行移動成分を設定
+	matView.r[3] = translation;
 }
 
 bool Object3d::Initialize()
@@ -545,7 +595,7 @@ void Object3d::Draw()
 	// nullptrチェック
 	assert(device);
 	assert(Object3d::cmdList);
-		
+
 	// 頂点バッファの設定
 	cmdList->IASetVertexBuffers(0, 1, &vbView);
 	// インデックスバッファの設定
