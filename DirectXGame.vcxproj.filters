@@ -61,10 +61,10 @@
     </FxCompile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\shaders\BasicShaderHeader.hlsli">
+    <None Include="Resources\shaders\SpriteShaderHeader.hlsli">
       <Filter>リソース ファイル\シェーダー ファイル</Filter>
     </None>
-    <None Include="Resources\shaders\SpriteShaderHeader.hlsli">
+    <None Include="Resources\shaders\BasicShaderHeader.hlsli">
       <Filter>リソース ファイル\シェーダー ファイル</Filter>
     </None>
   </ItemGroup>
