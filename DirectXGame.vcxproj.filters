@@ -56,7 +56,7 @@
     <FxCompile Include="Resources\shaders\SpriteVertexShader.hlsl">
       <Filter>リソース ファイル\シェーダー ファイル</Filter>
     </FxCompile>
-    <FxCompile Include="BasicGeometryShader.hlsl">
+    <FxCompile Include="Resources\shaders\BasicGeometryShader.hlsl">
       <Filter>リソース ファイル\シェーダー ファイル</Filter>
     </FxCompile>
   </ItemGroup>
