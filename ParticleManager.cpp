@@ -40,8 +40,8 @@ const DirectX::XMFLOAT3 operator+(const DirectX::XMFLOAT3& lhs, const DirectX::X
 {
 	XMFLOAT3 result;
 	result.x = lhs.x + rhs.x;
-	result.x = lhs.y + rhs.y;
-	result.x = lhs.z + rhs.z;
+	result.y = lhs.y + rhs.y;
+	result.z = lhs.z + rhs.z;
 	return result;
 }
 

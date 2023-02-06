@@ -237,7 +237,7 @@ private: // メンバ変数
 	XMFLOAT4 color = { 1,1,1,1 };
 	// ローカルスケール
 	XMFLOAT3 scale = { 1,1,1 };
-	//パーティクル行列
+	//パーティクル配列
 	std::forward_list<Particle> particles;
 };
 
