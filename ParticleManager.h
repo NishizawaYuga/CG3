@@ -32,6 +32,7 @@ public: // サブクラス
 	struct VertexPos
 	{
 		XMFLOAT3 pos;	//xyz座標
+		float scale;	//スケール
 	};
 
 	// 定数バッファ用データ構造体
@@ -57,6 +58,13 @@ public: // サブクラス
 		int frame = 0;
 		//終了フレーム
 		int num_frame = 0;
+
+		//スケール
+		float scale = 1.0f;
+		//初期値
+		float s_scale = 1.0f;
+		//最終値
+		float e_scale = 0.0f;
 	};
 
 private: // 定数
@@ -136,7 +144,9 @@ public: // 静的メンバ関数
 	/// <param name="position">初期座標</param>
 	/// <param name="velocity">速度</param>
 	/// <param name="accel">加速度</param>
-	void Add(int life, XMFLOAT3 position, XMFLOAT3 velocity, XMFLOAT3 accel);
+	/// <param name="start_scale">開始時スケール</param>
+	/// <param name="end_scale">終了時スケール</param>
+	void Add(int life, XMFLOAT3 position, XMFLOAT3 velocity, XMFLOAT3 accel,float start_scale,float end_scale);
 
 private: // 静的メンバ変数
 	// デバイス
